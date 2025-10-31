@@ -28,7 +28,6 @@ from set_condition import *
 import pylab as P
 
 
-print('start')
 
 # Empty array to store the initial distribution
 p_pred = np.zeros((n_particle, num_est_params))
