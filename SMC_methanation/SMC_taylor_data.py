@@ -12,8 +12,6 @@ num_trueparams = 8
 n_state=9
 num_model_params =8
 
-# num_est_params = 9
-
 est_params_list = [1, 1, 1, 1, 0, 0, 0, 0, 1]
 num_est_params = np.sum(est_params_list)
 # 基本的にnew_try以外はtrueにしない
