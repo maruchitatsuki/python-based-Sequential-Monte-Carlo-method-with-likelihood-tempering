@@ -37,10 +37,6 @@ coefficent_uni = np.array([0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5])
 
 #a:H2 b:CO2 c:CH4 d:H2O e:Ar mole fraction
 NX = 51 #分割数
-# datalist = [num for num in range(0, 67) if num % 20 == 0]
-# datalist = [num for num in range(17, 47)] # 正反応5逆反応5
-# datalist = [num for num in range(45, 47)] # 正反応5逆反応5
-# datalist = [num for num in range(0, 60)]
 # 8-12はデータ不足で除外されており、インデックスの関係上7番までは-1、13番以降は-5
 datalist = [4,5,16,17,18,21,23,24,25,26,35,48,51,52,55,57,58] # haltonsampling
 datalist = [0, 2, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 19, 20, 21, 22, 25, 26, 27, 28, 31, 35, 38, 40, 45, 49, 52, 55, 58] # クラスタリング
