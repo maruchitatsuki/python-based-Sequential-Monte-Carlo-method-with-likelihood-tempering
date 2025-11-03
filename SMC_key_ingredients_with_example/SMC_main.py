@@ -25,8 +25,88 @@ from assimulo.problem import Implicit_Problem
 from assimulo.solvers import Radau5DAE, IDA
 
 from set_condition import *
+from set_likelihood import *
 import pylab as P
 
+
+# 各種保存用のディレクトリの作成
+dirname = f"methanation_SMC_fewparams/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{n_data}/" #Name of the folder (directory) you want to create
+os.makedirs(dirname, exist_ok=True)  # Create a folder
+dirnamepred = f"{dirname}pred/"
+os.makedirs(dirnamepred, exist_ok=True)
+dirnameProgress = f"{dirname}tubular_Histgram_Progress/"
+os.makedirs(dirnameProgress, exist_ok=True)
+
+
+# 対数尤度の計算
+def my_loglike(y, data, sigma, n_data, scale=1.0):
+    """
+    A Gaussian log-likelihood function for a model with parameters given in theta
+    """
+
+    # 対数尤度を格納する空のリスト
+    log = []
+
+    # 各成分について尤度を計算
+    for i in range(0,5):
+        log_l =  (y[i,:]-data[i,:])*(y[i,:]-data[i,:])
+        log_l = np.sum(log_l.T, axis=0)
+        log_l = -(0.5 /sigma**2) * log_l - n_data * np.log(sigma)
+
+        # 各成分の対数尤度をリストに格納
+        log.append(log_l)
+
+    # 尤度をすべて足し合わせる
+    output = np.sum(log)
+
+    return output
+
+
+@ray.remote
+def cal_parallel_new(params):
+    # パラメータを反応速度式のパラメータとσに分ける
+    params0 = params[:-1]
+
+    # σを推定しない場合，sigmaはsigma_trueに固定される
+    if est_sigma:
+        sigma = params[-1]
+    else:
+        sigma = sigma_true
+
+    # パラメータを与え，それによって返ってくる各実験条件での返り値を得る
+    ycal1,molfraction = my_model( params0)
+    # スケーリング,とくに必要ない
+    y_scale = 1
+    ycal = ycal1 * y_scale
+
+    # 対数尤度を計算する
+    lk = my_loglike(ycal1, data, sigma, n_data, scale=1.0)
+
+    # 返り値に尤度，モル分率，エラー
+    return lk,molfraction
+
+def sim_particle(particle, guess):
+    print('sim_particle')
+    # Check memory usage to decide whether to reinitialize parallel processing
+    mem = psutil.virtual_memory() 
+    if mem.percent > 80:
+        print(mem)
+        ray.shutdown()
+        time.sleep(10)
+        ray.init(num_cpus=n_cores, ignore_reinit_error=True)
+
+    p_pred_bases[:, est_position] = particle
+
+    # Execute parallel computation
+    results = [cal_parallel_new.remote(p_pred_bases[i, :]) for i in range(n_particle)]
+
+    # Retrieve results from parallel computation
+    llk_Cl = ray.get(results)
+
+    # Format the retrieved results into usable arrays
+    llk, C_l_ = zip(*llk_Cl)
+
+    return llk, C_l_
 
 
 # Empty array to store the initial distribution
@@ -40,10 +120,11 @@ p_is = np.zeros(n_particle, dtype=int)
 # Data used in likelihood calculations (e.g., outlet concentrations for each experimental condition);
 # shape is number of particles × number of data points
 y_cal = np.zeros((n_particle, n_data))
-# Array to store some likelihood-related values (one element per particle)
+
 d_lk = np.zeros(n_particle)
-# Array to store some likelihood-related values (one element per particle)
 lk1 = np.zeros(n_particle)
+# store base parameters for all particles
+p_pred_bases = np.tile(np.append(baseparams, sigma_true), (n_particle, 1))
 
 
 
@@ -68,62 +149,61 @@ uni_list_set = set(uni_list)
 def_set = uni_list_set - est_position_set
 
 if normal_pred:
-    # 事前分布として正規分布を与える
+    # Assign a normal distribution as the prior distribution
     print('normal_distribution')
 
-    # trueparamsを中心として，Coefficentで定義された係数倍を分散として持つ正規分布を与える
+    # Assign a normal distribution centered on trueparams, with variance defined by Coefficent
     counter = 0
-    while counter== num_est_params:
+    while counter == num_est_params:
         if num_est_params[i] == 1:
-            p_pred[:,i] = np.random.normal(trueparams[i], np.abs(trueparams[i])*coefficent[i], n_particle)
+            p_pred[:, i] = np.random.normal(baseparams[i], np.abs(baseparams[i]) * coefficent[i], n_particle)
         counter += 1
 
     if taylor:
-        # 新規分布を事前分布として与え，かついくつかの分布を一様分布にするときに用いる
-        # いじる部分の数と推定パラメータ数の大きさを比べたり、いじる部分の位置とuni_listの数が等しくなれば、、、みたいな処理
+        # Used when assigning a new distribution as the prior distribution 
+        # and converting some distributions into uniform ones
+        # For example, compare the number of modified parts with the number of estimated parameters,
+        # or process cases where the positions of modified parts and the number of elements in uni_list are equal
         print('taylor')
         if len(def_set):
             sys.exit()
-            print('推定するパラメータ数に対してtaylorしている値が多いです。パラメータを確認してください。')
+            print('There are more Taylor-modified values than estimated parameters. Please check the parameters.')
         else: 
             sys.exit()
             counter_taylor = 0
             j = 0
             while counter_taylor == num_est_params:
                 if est_position[j] == uni_list[counter_taylor]:
-                    p_pred[:,counter] = np.random.uniform(low_limit[counter_taylor], high_limit[counter_taylor], n_particle)
+                    p_pred[:, counter] = np.random.uniform(low_limit[counter_taylor], high_limit[counter_taylor], n_particle)
                     j += 1
                 counter_taylor += 1
+
 high_limit_array = np.array([high_limit[i] for i in est_position])
 low_limit_array = np.array([low_limit[i] for i in est_position])
-
 
 firstpred = f'{dirnamepred}first_p_pred.csv'
 np.savetxt(firstpred, p_pred, delimiter=',')
 
-# 事前分布をグラフに
-# このヒストグラムだけ関数にしていないので，そうしても良いかも
+# Plot the prior distribution
+# This histogram is not yet wrapped in a function, but it could be made into one
 fig = plt.figure(figsize=(10, 14))
-columns_origin=["Af","Eaf","Ar","Ear","BCO2","dHCO2","BH2O","dHH2O","sigma"]
-
-# print(est_position_set)
+columns_origin = ["Af", "Eaf", "Ar", "Ear", "BCO2", "dHCO2", "BH2O", "dHH2O", "sigma"]
 
 sub = 0
 for index in est_position:
-    ax1 = plt.subplot(num_est_params, 1, sub+1)
+    ax1 = plt.subplot(num_est_params, 1, sub + 1)
     ax1.hist(p_pred[:, sub], 40, range=(low_limit[index], high_limit[index]), density=True)
-    # ax1.axvline(p_filt[:, index].mean(),color = 'red', linestyle = 'dashed', linewidth =1)
-    # 平均値をグラフのどこかに書き込みたかったが失敗，Excelで簡単に出力できるのでよしとする
-    # ax1.text(0,0,f'Mean:{p_filt[:, index].mean()}',va = 'center', ha ='center', transform=ax1.transAxes)　
     ax1.set_ylabel(columns_origin[index])
     ax1.grid('on')
     sub += 1
+
 plt.savefig(f"{dirnameProgress}00_PriorDistribution.png", bbox_inches="tight", dpi=300)
 plt.close()
 
-# 最初のinit（並列展開）
-ray.init(num_cpus=n_cores,ignore_reinit_error=True)
-RAY_DEDUP_LOGS=0
+# Initial parallelization (parallel expansion)
+ray.init(num_cpus=n_cores, ignore_reinit_error=True)
+RAY_DEDUP_LOGS = 0
+
 
 try:
 

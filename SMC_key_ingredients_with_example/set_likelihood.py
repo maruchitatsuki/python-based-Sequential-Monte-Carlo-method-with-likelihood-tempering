@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 
-def model(t, x, theta):
+def my_model(t, x, theta):
     k1, k3, k4, k5 = theta
     k2, k6 = 1.0, 0.5  # 固定パラメータ
     dx1 = -k1 * x[0] + k2 * np.sin(x[1])

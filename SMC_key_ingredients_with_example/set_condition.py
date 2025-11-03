@@ -12,9 +12,12 @@ import time
 n_state = 4 # number of all parameters (including sigma)
 num_model_params = 4 # number of model parameters
 est_params_list = [1, 1, 1, 1] # list indicating which parameters to estimate (1: estimate, 0: fix)
+uni_list = [0,1,2,3,8] # parameters with uniform distribution
 num_est_params = np.sum(est_params_list)
 normal_pred = False # If True, prior distribution is normal distribution
 n_cores= 30 # number of cores
+taylor = False # Taylor mode flag
+est_sigma = True
 
 # Key hyper parameters
 random_seed = 1 # Set random seed for reproducibility
@@ -59,3 +62,11 @@ low_k  = [2,1,1,1,0.1*10,-0.2*10,0.1*10,-0.2*10, 0.9]
 high_limit = use_params + use_params*high_k
 low_limit  = use_params - use_params*low_k
 
+# set coefficent for prior distribution
+coefficent = np.array([0.5,0.5,0.5,0.5,0.3,0.3,0.3,0.3])
+# set coefficent for prior distribution @taylor=True
+coefficent_uni = np.array([0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5])
+
+# set initial
+NX = 1
+guess = np.zeros([n_data,4*NX])
