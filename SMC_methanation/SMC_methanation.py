@@ -42,7 +42,7 @@ from memory_profiler import profile
 
 
 # 各種保存用のディレクトリの作成
-dirname = f"SMC_methanation/methanation_save/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{n_data}/" #Name of the folder (directory) you want to create
+dirname = f"methanation_save/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{n_data}/" #Name of the folder (directory) you want to create
 os.makedirs(dirname, exist_ok=True)  # Create a folder
 
 dirnameProgress = f"{dirname}tubular_Histgram_Progress/"
@@ -64,7 +64,7 @@ dirnamevaliables = f"{dirname}valiables/"
 os.makedirs(dirnamevaliables,exist_ok=True)
 
 # SMC_tsuboi_dataを読み込み，変数に格納，別の変数としてtxtファイルを定義して書き込みを行う
-with open("SMC_methanation/SMC_methanation_data.py", mode="r", encoding="utf-8_sig") as THISFILE:
+with open("SMC_methanation_data.py", mode="r", encoding="utf-8_sig") as THISFILE:
     CODE = THISFILE.read()
 with open(f"{dirname}Initdata_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt", mode="w") as PROGRAM:
     PROGRAM.write(CODE)
@@ -422,7 +422,9 @@ for i in range(0,n_data):
     guess0[6*NX:7*NX] = u_in[i]
     guess[i,:] = guess0
 
-# 生データ
+"""
+Real experimental data
+"""
 # print('realdata')
 # y_scale = 1.0
 # data = np.ones([5,datapoint])
@@ -434,7 +436,7 @@ for i in range(0,n_data):
 # n_data = np.size(data[0,:])
 # print(n_data)
 
-# # data_molに実データのモル分率を格納
+# # Stores mole fraction of real data in data_mol
 # data_mol = np.ones([5,datapoint])
 # data_mol[0,:] = Xa_out
 # data_mol[1,:] = Xb_out
@@ -444,21 +446,19 @@ for i in range(0,n_data):
 
 
 
-# 疑似データ
-print('疑似データ')
+"""
+Artificially generated data
+"""
+print('artificial data')
+
+# Flow is flow rate, molfraction is mole fraction
 Flow,molfraction = my_model(trueparams)
-# # n_data_list = [np.size(arr[point_indices]) for arr in truemodel_origin]
-# n_data = np.size(truemodel_origin[0,:])
-# y_scale = 1.0  # /np.max(truemodel_origin)
 data_mol = molfraction
 data = Flow
-  # set random seed, so the data is reproducible each time
-# # data = np.ones([7,datapoint])
+
+# Add noise to the data
 for i in range(0,5):
-    # data_mol[i,:] = 1.0 * sigma_true * np.random.standard_normal(datapoint) + data_mol[i,:]
     data[i,:] = 1.0 * sigma_true * np.random.standard_normal(n_data) + data[i,:]
-    # for j in range(0,3):
-        # data[i,j] = truemodel[i,j]
 for i in range(n_data):
     data_mol[0,i] = data_mol[0,i]/np.sum([data_mol[0,i],data_mol[1,i],data_mol[2,i],data_mol[3,i],data_mol[4,i]])
     data_mol[1,i] = data_mol[1,i]/np.sum([data_mol[0,i],data_mol[1,i],data_mol[2,i],data_mol[3,i],data_mol[4,i]])
@@ -466,22 +466,11 @@ for i in range(n_data):
     data_mol[3,i] = data_mol[3,i]/np.sum([data_mol[0,i],data_mol[1,i],data_mol[2,i],data_mol[3,i],data_mol[4,i]])
     data_mol[4,i] = data_mol[4,i]/np.sum([data_mol[0,i],data_mol[1,i],data_mol[2,i],data_mol[3,i],data_mol[4,i]])
 
-# 例：data と data_mol が NumPy 配列である場合
-# data.shape = (5, n_data)
-# data_mol.shape = (5, n_data)
-
-# pandas の DataFrame に変換して保存
+# Save the generated data as CSV files
 df_data = pd.DataFrame(data)
 df_data_mol = pd.DataFrame(data_mol)
-
-# CSV ファイルとして出力（インデックスやヘッダを付けない場合）
 df_data.to_csv("data.csv", index=False, header=False)
 df_data_mol.to_csv("data_mol.csv", index=False, header=False)
-
-    
-# # # data = 1.0 * sigma_true * np.random.standard_normal(truemodel.shape) + truemodel
-
-
 
 # 粒子毎の並列処理
 # @profile()

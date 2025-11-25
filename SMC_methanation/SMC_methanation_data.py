@@ -38,9 +38,9 @@ coefficent_uni = np.array([0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5])
 #a:H2 b:CO2 c:CH4 d:H2O e:Ar mole fraction
 NX = 51 #分割数
 # 8-12はデータ不足で除外されており、インデックスの関係上7番までは-1、13番以降は-5
-datalist = [4,5,16,17,18,21,23,24,25,26,35,48,51,52,55,57,58] # haltonsampling
-datalist = [0, 2, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 19, 20, 21, 22, 25, 26, 27, 28, 31, 35, 38, 40, 45, 49, 52, 55, 58] # クラスタリング
-
+# datalist = [4,5,16,17,18,21,23,24,25,26,35,48,51,52,55,57,58] # haltonsampling
+# datalist = [0, 2, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 19, 20, 21, 22, 25, 26, 27, 28, 31, 35, 38, 40, 45, 49, 52, 55, 58] # クラスタリング
+datalist = [0, 2]
 # datalist = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
 datastart = datalist[0] # ここから
 datafin = datalist[-1] # ここまで
@@ -152,8 +152,8 @@ Fe_out = np.zeros(n_data)
 
 # CSVファイルを読み込み、DataFrameとして取得
 # 8~11まで抜けていると思っていたが、T_inがunmeasurementのため意図的に抜いていたようだ
-information_df = pd.read_csv('SMC_methanation/gpromscsv/information.csv').fillna(0)
-concentration_gproms_df = pd.read_csv('SMC_methanation/gpromscsv/concentration_all_gproms.csv').fillna(0)
+information_df = pd.read_csv('methanation_data/information.csv').fillna(0)
+concentration_gproms_df = pd.read_csv('methanation_data/concentration_all_gproms.csv').fillna(0)
 information = information_df.iloc[datastart:datafin+1].values
 # concentration_gproms = concentration_gproms_df.iloc[datastart:datafin+1].values
 
