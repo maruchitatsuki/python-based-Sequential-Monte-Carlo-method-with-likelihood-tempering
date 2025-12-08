@@ -187,7 +187,7 @@ def DistributionDrawerWhileSMC(p_filt, dirname, name_):
     columns_origin=["Af","Eaf","Ar","Ear","BCO2","dHCO2","BH2O","dHH2O","sigma"]
     for sub in range(p_filt.shape[1]):
         index = sub
-        ax1 = fig.add_subplot((num_est_params+2)//3, 3, sub + 1)
+        ax1 = fig.add_subplot(num_est_params, 1, sub+1)
         ax1.hist(p_filt[:, sub], 50, range=(low_limit[index], high_limit[index]), density=True)
         ax1.axvline(p_filt[:, sub].mean(),color = 'red', linestyle = 'dashed', linewidth =1)
         # 平均値をグラフのどこかに書き込みたかったが失敗，Excelで簡単に出力できるのでよしとする
